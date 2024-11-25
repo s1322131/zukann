@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>Canvas Image Upload</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        /* ギャラリーのスタイル */
+        #gallery {
+            display: flex;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+        #gallery img {
+            width: 100px;
+            height: 100px;
+            margin: 10px;
+            border-radius: 8px;
+            object-fit: cover;
+        }
+    </style>
+</head>
+<body>
+    <video id="camera" autoplay></video><br>
+    <img id="img" style="max-width:100%;"><br>
+    
+    <canvas id="myCanvas" style="display:none"></canvas><br>
+    <input type="text" id="txt" value="図の内容について、名前を教えてください" size=50>
+    <button id="start">send</button>
+    <button id="save">Save Image</button>
+    
+    <div id="gallery"></div> <!-- ギャラリー表示用のセクション -->
+    <div id="answer">返信内容</div>
+    
+<script>
+    // 初期設定
+    var canvas = document.getElementById('myCanvas');
+    var ctx = canvas.getContext('2d');
+    var video = document.getElementById('camera');
+    var imageData = '';
+
+    $(document).ready(function() {
+        /////// 以下、Webカメラを取り扱う処理
+        video.setAttribute("width", 320);
+        video.setAttribute("height", 240);
+
+        //カメラが起動できたかのフラグ
+        var localMediaStream = null;
+        
+        //カメラ使えるかチェック
+        var hasGetUserMedia = function() {
+            return (navigator.getUserMedia || navigator.webkitGetUserMedia ||
+                    navigator.mozGetUserMedia || navigator.msGetUserMedia);
+        };
+
+        //エラー
+        var onFailSoHard = function(e) {
+            console.log('カメラを利用できません!', e);
+            alert("カメラを利用できません! " + e);
+        };
+
+        if (!hasGetUserMedia()) {
+            alert("Unsupported browser.");
+        } else {
+            window.URL = window.URL || window.webkitURL;
+            navigator.getUserMedia = navigator.getUserMedia ||
+                                     navigator.webkitGetUserMedia || navigator.mozGetUserMedia ||
+                                     navigator.msGetUserMedia;
+            navigator.getUserMedia({ video: true }, function(stream) {
+                video.srcObject = stream;
+                localMediaStream = stream;
+            }, onFailSoHard);
+        }
+    });
+
+    // ボタンがクリックされた時の処理
+    $('#start').on('click', function() {
+        // videoの縦幅横幅を取得
+        var w = video.offsetWidth;
+        var h = video.offsetHeight;
+
+        // 同じサイズをcanvasに指定
+        canvas.setAttribute("width", w);
+        canvas.setAttribute("height", h);
+
+        // canvasにコピー
+        ctx.drawImage(video, 0, 0, w, h);
+
+        imageData = canvas.toDataURL('image/png');
+        var base64Data = imageData.replace(/^data:image\/png;base64,/, "");
+
+        var txt = $('#txt').val();
+
+        // サーバーに送信
+        $.ajax({
+            type: 'POST',
+            url: 'upload',  // サーバー側のurl
+            data: {
+                "imgurl": base64Data, "prompt": encodeURIComponent(txt)
+            },
+            success: function(response) {
+                // サーバーからの返答が変数responseに入っている
+                $('#answer').html(response);
+            },
+            error: function() {
+                alert('失敗しました');
+            }
+        });
+    });
+
+    // 画像を保存する処理
+    $('#save').on('click', function() {
+        if (imageData) {
+            var link = document.createElement('a');
+            link.href = imageData;
+            link.download = 'captured_image.png';  // 保存するファイル名
+            link.click();  // リンクをクリックしてダウンロード
+        } else {
+            alert('まず画像を撮影してください');
+        }
+    });
+
+    // ギャラリーに画像を追加
+    $('#start').on('click', function() {
+        if (imageData) {
+            var newImage = document.createElement('img');
+            newImage.src = imageData;
+            $('#gallery').append(newImage);  // ギャラリーに画像を追加
+        }
+    });
+</script>
+
+</body>
+</html>
