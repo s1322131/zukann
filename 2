@@ -79,14 +79,19 @@
             }
 
             // カメラ映像を取得
-            navigator.mediaDevices.getUserMedia({ video: true })
-                .then(function(stream) {
-                    video.srcObject = stream;
-                })
-                .catch(function(err) {
-                    console.error('カメラを利用できません!', err);
-                    alert("カメラを利用できません! " + err.message);
-                });
+			navigator.mediaDevices.getUserMedia({ 
+    			video: { 
+        			facingMode: { exact: "environment" } // 外部カメラを指定
+    			}
+			})
+			.then(function(stream) {
+    			video.srcObject = stream;
+			})
+			.catch(function(err) {
+    			console.error('カメラを利用できません!', err);
+    			alert("カメラを利用できません! " + err.message);
+			});
+
         });
 
         // 「send」ボタンがクリックされた時の処理
