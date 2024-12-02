@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>図鑑コレクションアプリ</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        /* ギャラリーのスタイル */
+        #gallery {
+            display: flex;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+        .gallery-item {
+            text-align: center;
+            margin: 10px;
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 10px;
+            width: 150px;
+            cursor: pointer; /* カーソルをポインタに変更 */
+            position: relative;
+            transition: box-shadow 0.3s;
+        }
+        .gallery-item:hover {
+            box-shadow: 0 0 10px rgba(0,0,0,0.2);
+        }
+        .gallery-item img {
+            width: 100px;
+            height: 100px;
+            border-radius: 8px;
+            object-fit: cover;
+        }
+        .description {
+            margin-top: 10px;
+            font-size: 12px;
+            color: #555;
+            display: none; /* 初期状態では非表示 */
+        }
+    </style>
+</head>
+<body>
+    <h1>図鑑コレクションアプリ</h1>
+    
+    <!-- カメラ映像 -->
+    <video id="camera" autoplay></video><br>
+    
+    <!-- キャプチャした画像 -->
+    <canvas id="myCanvas" style="display:none"></canvas><br>
+    
+    <!-- 説明入力とボタン -->
+    <input type="text" id="txt" value="植物の名前と季節、地域、豆知識を一文ずつ改行して教えて" size="50">
+    <button id="start">send</button>
+    <button id="save">Save Image</button>
+    
+    <!-- ギャラリー表示用のセクション -->
+    <div id="gallery"></div>
+    
+    <script>
+        // 初期設定
+        const canvas = document.getElementById('myCanvas');
+        const ctx = canvas.getContext('2d');
+        const video = document.getElementById('camera');
+        let imageData = '';
+
+        $(document).ready(function() {
+            /////// Webカメラの設定
+            video.setAttribute("width", 320);
+            video.setAttribute("height", 240);
+
+            // カメラが利用可能かチェック
+            const hasGetUserMedia = () => {
+                return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+            };
+
+            if (!hasGetUserMedia()) {
+                alert("このブラウザではカメラが利用できません。");
+                return;
+            }
+
+            // カメラ映像を取得
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(function(stream) {
+                    video.srcObject = stream;
+                })
+                .catch(function(err) {
+                    console.error('カメラを利用できません!', err);
+                    alert("カメラを利用できません! " + err.message);
+                });
+        });
+
+        // 「send」ボタンがクリックされた時の処理
+        $('#start').on('click', function() {
+            // Videoの幅と高さを取得
+            const w = video.videoWidth;
+            const h = video.videoHeight;
+
+            // Canvasのサイズを設定
+            canvas.setAttribute("width", w);
+            canvas.setAttribute("height", h);
+
+            // CanvasにVideoの画像を描画
+            ctx.drawImage(video, 0, 0, w, h);
+
+            // 画像データを取得
+            imageData = canvas.toDataURL('image/png');
+            const base64Data = imageData.replace(/^data:image\/png;base64,/, "");
+
+            // 入力されたテキストを取得
+            const txt = $('#txt').val();
+
+            // サーバーに画像とテキストを送信
+            $.ajax({
+                type: 'POST',
+                url: 'upload',  // サーバー側のURLに変更してください
+                data: {
+                    "imgurl": base64Data, 
+                    "prompt": encodeURIComponent(txt)
+                },
+                success: function(response) {
+                    // サーバーからの返答がresponseに入っている
+
+                    // ギャラリーアイテムを作成
+                    const galleryItem = $('<div>').addClass('gallery-item');
+                    
+                    // 画像を追加
+                    const newImage = $('<img>').attr('src', imageData);
+                    galleryItem.append(newImage);
+                    
+                    // 説明文のdivを作成（初期は非表示）
+                    const descDiv = $('<div>').addClass('description').text(response);
+                    galleryItem.append(descDiv);
+
+                    // ギャラリーアイテムにクリックイベントを追加
+                    galleryItem.on('click', function() {
+                        descDiv.toggle(); // 説明文の表示/非表示を切り替え
+                    });
+
+                    // ギャラリーにアイテムを追加
+                    $('#gallery').append(galleryItem);
+                },
+                error: function() {
+                    alert('送信に失敗しました。');
+                }
+            });
+        });
+
+        // 「Save Image」ボタンがクリックされた時の処理
+        $('#save').on('click', function() {
+            if (imageData) {
+                const link = document.createElement('a');
+                link.href = imageData;
+                link.download = 'captured_image.png';  // 保存するファイル名
+                link.click();  // リンクをクリックしてダウンロード
+            } else {
+                alert('まず画像を撮影してください。');
+            }
+        });
+    </script>
+</body>
+</html>
