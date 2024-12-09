@@ -236,7 +236,9 @@
                 success: function(response) {
                     // カメラの横に表示されるギャラリーアイテム
                     $('#captured-image').attr('src', imageData);
-                    $('#captured-description').text(response);
+                    // <b> タグを取り除いて表示
+                    const cleanedResponse = response.replace(/<b>/g, '').replace(/<\/b>/g, '');
+                    $('#captured-description').text(cleanedResponse);
                     $('#gallery-item').show(); // 画像と説明文を表示
                 },
                 error: function() {
