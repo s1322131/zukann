@@ -1,0 +1,55 @@
+from http.server import HTTPServer, SimpleHTTPRequestHandler
+import ssl
+import socket
+import urllib
+from urllib.parse import unquote
+import base64
+import PIL.Image
+import google.generativeai as genai
+import os
+
+# Google APIキーの設定
+GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')  # または、GOOGLE_API_KEY="自分のAPIキー"
+genai.configure(api_key=GOOGLE_API_KEY)
+model = genai.GenerativeModel('gemini-1.5-flash')
+
+class MyHandler(SimpleHTTPRequestHandler):
+
+    def htmlheader(self): # HTTPヘッダーを出力
+        self.send_response(200)
+        self.end_headers()
+
+    def do_POST(self):
+        length = self.headers.get('content-length')
+        try:
+            nbytes = int(length)
+        except (TypeError, ValueError):
+            nbytes = 0
+        data = self.rfile.read(nbytes)
+        post = urllib.parse.parse_qs(data)
+
+        if self.path == "/upload":
+            # 画像データとテキストの取得
+            imgurl = post[b'imgurl'][0].decode()  # base64の画像データ
+            imgBin = base64.b64decode(imgurl)  # バイナリに変換して保存
+            open("uploaded.png", mode="wb").write(imgBin)  # PNGファイルとして保存
+
+            # プロンプト（植物情報）
+            prompt = post[b'prompt'][0].decode()
+            prompt = unquote(prompt)  # 日本語文字化け対策
+            print("Received prompt:", prompt)
+
+            # 画像とプロンプトをGemini APIに送信
+            img = PIL.Image.open('./uploaded.png')
+            response = model.generate_content([prompt, img])  # Geminiに質問して回答を得る
+
+            # レスポンスとして、季節、地域、豆知識を含む情報を返す
+            answer = {
+                "season": "春",  # 例：季節
+                "region": "日本",  # 例：地域
+                "tips": "豆知識：この植物は春に花が咲きます。"  # 例：豆知識
+            }
+
+            # ここでJSON形式でレスポンスを送信
+            self.htmlheader()
+            self.wfile.write(str(answer).encode("utf-8"))  # JSONを返す
