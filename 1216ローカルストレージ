@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>図鑑コレクションアプリ</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        /* ベースのスタイル */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f3f9f7;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            text-align: center;
+        }
+
+        h1 {
+            font-family: 'DotGothic16', sans-serif;
+            font-size: 36px;
+            color: #ff6f61;
+            margin-top: 30px;
+            margin-bottom: 10px;
+        }
+
+        /* ギャラリーアイテム */
+        #gallery-item {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        /* 画像と説明のスタイル */
+        #captured-image {
+            width: 250px;
+            height: 250px;
+            border-radius: 12px;
+            object-fit: cover;
+            border: 4px solid #ff6f61;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .description {
+            font-size: 14px;
+            color: #333;
+            background-color: #fff;
+            border-radius: 8px;
+            padding: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-top: 15px;
+            margin-bottom: 25px;
+            max-width: 80%;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        /* コレクションセクション */
+        #collection {
+            margin-top: 30px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .collection-item {
+            margin: 20px;
+            text-align: center;
+            width: 250px;
+            background-color: #fff;
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .collection-item:hover {
+            transform: scale(1.05);
+        }
+
+        .collection-item img {
+            width: 220px;
+            height: 220px;
+            border-radius: 12px;
+            object-fit: cover;
+            border: 2px solid #ff6f61;
+        }
+
+        .collection-item .description {
+            font-size: 12px;
+            color: #555;
+            margin-top: 10px;
+        }
+
+        .delete-button {
+            background-color: #ff4b3a;
+            font-size: 12px;
+            padding: 5px 10px;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        .delete-button:hover {
+            background-color: #e63946;
+        }
+
+        /* モーダルウィンドウ */
+        #modal {
+            display: none; /* 最初は非表示 */
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            justify-content: center;
+            align-items: center;
+        }
+
+        #modal-content {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 12px;
+            width: 80%;
+            max-width: 600px;
+            text-align: center;
+        }
+
+        #modal-content img {
+            width: 100%;
+            border-radius: 12px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        #modal-content .description {
+            margin-top: 15px;
+            font-size: 14px;
+            color: #333;
+        }
+
+        #close-modal {
+            margin-top: 20px;
+            background-color: #ff6f61;
+            color: #fff;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        #close-modal:hover {
+            background-color: #ff4b3a;
+        }
+
+        /* カメラのスタイル */
+        #camera-container {
+            position: relative;
+            display: inline-block;
+        }
+
+        video {
+            width: 320px;
+            height: 240px;
+            border-radius: 12px;
+            background-color: #000;
+            border: 4px solid #ff6f61;
+        }
+
+        #camera {
+            display: block;
+        }
+
+        /* ボタンのデザイン */
+        button {
+            background-color: #ff6f61;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 8px;
+            margin: 10px;
+        }
+
+        button:hover {
+            background-color: #ff4b3a;
+        }
+
+        #close-camera {
+            display: none;
+        }
+
+        input[type="text"] {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 8px;
+            border: 2px solid #ff6f61;
+            font-size: 16px;
+            width: 50%;
+            display: none;
+        }
+
+        #save {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>図鑑コレクションアプリ</h1>
+
+    <!-- カメラ操作ボタン -->
+    <button id="open-camera">カメラを開く</button>
+    <button id="close-camera" style="display:none;">カメラを閉じる</button>
+
+    <!-- カメラ映像と画像・説明文 -->
+    <div id="camera-container">
+        <video id="camera" autoplay></video>
+        <div id="gallery-item">
+            <img id="captured-image" src="" alt="Captured Image">
+            <div id="captured-description" class="description"></div>
+            <button id="add-to-collection">図鑑に登録</button>
+        </div>
+    </div>
+
+    <!-- キャプチャした画像 -->
+    <canvas id="myCanvas" style="display:none"></canvas><br>
+
+    <!-- 説明入力とボタン -->
+    <input type="text" id="txt" value="植物の名前と季節、地域、豆知識を一文ずつ改行して教えて" size="50" style="display: none;">
+    <button id="start">送る</button>
+    <button id="save">Save Image</button>
+
+    <!-- コレクションセクション -->
+    <div id="collection"></div>
+
+    <!-- モーダルウィンドウ -->
+    <div id="modal">
+        <div id="modal-content">
+            <img id="modal-image" src="" alt="詳細画像">
+            <div id="modal-description" class="description"></div>
+            <button id="close-modal">閉じる</button>
+        </div>
+    </div>
+
+    <script>
+        // 初期設定
+        const canvas = document.getElementById('myCanvas');
+        const ctx = canvas.getContext('2d');
+        const video = document.getElementById('camera');
+        let imageData = '';
+
+        $(document).ready(function() {
+            /////// Webカメラの設定
+            video.setAttribute("width", 320);
+            video.setAttribute("height", 240);
+
+            // カメラが利用可能かチェック
+            const hasGetUserMedia = () => {
+                return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+            };
+
+            if (!hasGetUserMedia()) {
+                alert("このブラウザではカメラが利用できません。");
+                return;
+            }
+
+            // 「カメラを開く」ボタンがクリックされた時の処理
+            $('#open-camera').on('click', function() {
+                navigator.mediaDevices.getUserMedia({ video: true })
+                    .then(function(stream) {
+                        video.srcObject = stream;
+                        video.style.display = 'block'; // カメラを表示
+                        $('#open-camera').hide(); // 「カメラを開く」ボタンを非表示
+                        $('#close-camera').show(); // 「カメラを閉じる」ボタンを表示
+                    })
+                    .catch(function(err) {
+                        console.error('カメラを利用できません!', err);
+                        alert("カメラを開くことができません。");
+                    });
+            });
+
+            // 「カメラを閉じる」ボタンがクリックされた時の処理
+            $('#close-camera').on('click', function() {
+                const stream = video.srcObject;
+                const tracks = stream.getTracks();
+                tracks.forEach(track => track.stop()); // ストリームを停止
+                video.srcObject = null; // カメラ映像を停止
+                video.style.display = 'none'; // カメラを非表示
+                $('#open-camera').show(); // 「カメラを開く」ボタンを表示
+                $('#close-camera').hide(); // 「カメラを閉じる」ボタンを非表示
+            });
+
+            // 「send」ボタンがクリックされた時の処理
+            $('#start').on('click', function() {
+                const w = video.videoWidth;
+                const h = video.videoHeight;
+
+                // Canvasのサイズを設定
+                canvas.setAttribute("width", w);
+                canvas.setAttribute("height", h);
+
+                // CanvasにVideoの画像を描画
+                ctx.drawImage(video, 0, 0, w, h);
+
+                // 画像データを取得
+                imageData = canvas.toDataURL('image/png');
+                const base64Data = imageData.replace(/^data:image\/png;base64,/, "");
+
+                // 入力されたテキストを取得
+                const txt = $('#txt').val();
+
+                // サーバーに画像とテキストを送信
+                $.ajax({
+                    type: 'POST',
+                    url: 'upload',  // サーバー側のURLに変更してください
+                    data: {
+                        "imgurl": base64Data,
+                        "prompt": encodeURIComponent(txt)
+                    },
+                    success: function(response) {
+                        // HTMLタグが含まれている場合、タグを除去する
+                        let cleanDescription = response.replace(/<[^>]*>/g, ''); // <b>タグなどを取り除く
+
+                        // カメラの横に表示されるギャラリーアイテム
+                        $('#captured-image').attr('src', imageData);
+                        $('#captured-description').text(cleanDescription);  // .text()でHTMLタグを取り除く
+                        $('#gallery-item').show(); // 画像と説明文を表示
+                    },
+                    error: function() {
+                        alert('送信に失敗しました。');
+                    }
+                });
+            });
+
+            // 「図鑑に登録」ボタンがクリックされた時の処理
+            $('#add-to-collection').on('click', function() {
+                const imageUrl = $('#captured-image').attr('src');
+                const description = $('#captured-description').text();
+
+                // コレクションアイテムを作成
+                const collectionItem = $('<div>').addClass('collection-item');
+                const newImage = $('<img>').attr('src', imageUrl).on('click', function() {
+                    // 画像をクリックしたら詳細を表示
+                    viewCollectionItem(imageUrl, description);
+                });
+
+                // 削除ボタンを追加
+                const deleteButton = $('<button>').addClass('delete-button').text('削除').on('click', function() {
+                    deleteCollectionItem(collectionItem, imageUrl);
+                });
+
+                // コレクションに追加
+                collectionItem.append(newImage).append(deleteButton);
+                $('#collection').append(collectionItem);
+
+                // ローカルストレージに保存
+                saveToLocalStorage(imageUrl, description);
+
+                // 一時表示部分を非表示にする
+                $('#gallery-item').hide();
+
+                // カメラを再表示
+                $('#camera').show();
+            });
+
+            // コレクションアイテムを「見る」ボタンでモーダル表示
+            function viewCollectionItem(imageUrl, description) {
+                $('#modal-image').attr('src', imageUrl);
+                $('#modal-description').text(description);
+                $('#modal').show(); // モーダルを表示
+            }
+
+            // モーダルを閉じる
+            $('#close-modal').on('click', function() {
+                $('#modal').hide();
+            });
+
+            // ローカルストレージに保存する関数
+            function saveToLocalStorage(imageUrl, description) {
+                let collection = JSON.parse(localStorage.getItem('collection')) || [];
+                collection.push({ imageUrl, description });
+                localStorage.setItem('collection', JSON.stringify(collection));
+            }
+
+            // コレクションアイテムを削除する関数
+            function deleteCollectionItem(collectionItem, imageUrl) {
+                // コレクションアイテムを削除
+                collectionItem.remove();
+
+                // ローカルストレージから該当アイテムを削除
+                let collection = JSON.parse(localStorage.getItem('collection')) || [];
+                collection = collection.filter(item => item.imageUrl !== imageUrl);
+                localStorage.setItem('collection', JSON.stringify(collection));
+            }
+
+            // ページ読み込み時にコレクションを復元する関数
+            function loadCollection() {
+                let collection = JSON.parse(localStorage.getItem('collection')) || [];
+                collection.forEach(item => {
+                    const collectionItem = $('<div>').addClass('collection-item');
+                    const newImage = $('<img>').attr('src', item.imageUrl).on('click', function() {
+                        viewCollectionItem(item.imageUrl, item.description);
+                    });
+
+                    // 削除ボタンを追加
+                    const deleteButton = $('<button>').addClass('delete-button').text('削除').on('click', function() {
+                        deleteCollectionItem(collectionItem, item.imageUrl);
+                    });
+
+                    // コレクションに追加
+                    collectionItem.append(newImage).append(deleteButton);
+                    $('#collection').append(collectionItem);
+                });
+            }
+
+            // ページが読み込まれたときにコレクションを復元
+            loadCollection();
+
+            // 「Save Image」ボタンがクリックされた時の処理
+            $('#save').on('click', function() {
+                if (imageData) {
+                    const link = document.createElement('a');
+                    link.href = imageData;
+                    link.download = 'captured_image.png';  // 保存するファイル名
+                    link.click();  // リンクをクリックしてダウンロード
+                } else {
+                    alert('まず画像を撮影してください。');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
